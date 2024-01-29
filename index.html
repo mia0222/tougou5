@@ -165,7 +165,7 @@
     setInterval(function () {
       if (lastPosition && !isSystemPaused) {
         var speed = lastPosition.coords.speed;
-        if (parseFloat(speed) * 3.6 > 10) { // 速度が10 km/h以上の場合
+        if (parseFloat(speed) * 3.6 > 6) { // 速度が10 km/h以上の場合
           pauseSystem();
         } else {
           resumeSystem();
