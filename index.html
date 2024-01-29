@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>プログラムの統合</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+</head>
+
+<body>
+  <h1>健康管理</h1>
+
+  <div id="sub">
+    <div id="deviceorientation">
+      <p>北極方向に対する向き: <span id="dir"></span></p>
+      <p>前後の傾き角度: <span id="fb"></span></p>
+      <p>左右の傾き角度: <span id="lr"></span></p>
+    </div>
+    <div id="acceleration">
+      <p>x軸の値: <span id="ax"></span></p>
+      <p>y軸の値: <span id="ay"></span></p>
+      <p>z軸の値: <span id="az"></span></p>
+    </div>
+  </div>
+
+  <div id="main">
+    <p id="locationData">位置情報はここに表示されます.</p>
+    <p id="distance">移動距離: 0 メートル</p>
+    <p id="calories">消費カロリー: 0 kcal</p>
+
+    <p>歩数: <span id="stepCount">0</span></p>
+     <!-- メッセージを表示する新しい div -->
+    <p id="passMessage">特定の場所に近づくとメッセージが表示されます</p>
+  </div>
+  <div id="weight">
+    <label for="weightInput">体重（kg）:</label>
+    <input type="number" id="weightInput" step="0.1">
+  </div>
+
+  <div id="mode">
+    <label for="activityTypeInput">活動の種類:</label>
+    <select id="activityTypeInput">
+      <option value="walking">ウォーキング</option>
+      <option value="running">ランニング</option>
+      <!-- 他の活動の種類を追加 -->
+    </select>
+  </div>
+
+  <button id="startButton">開始</button>
+  <button id="stopButton">停止</button>
+
+  <div id="modeSelection">
+    <label for="modeSelect">モード選択:</label>
+    <select id="modeSelect" onchange="changeMode()">
+      <option value="normal">歩数計</option>
+      <option value="smartphone">歩きスマホ</option>
+    </select>
+  </div>
+
+ 
+
+  <button id="start" onclick="startSensors()">Start Sensors</button>
+
+  <script>
+    var locationDataElement = document.getElementById("locationData");
+    var distanceElement = document.getElementById("distance");
+    var caloriesElement = document.getElementById("calories");
+    var startButton = document.getElementById("startButton");
+    var stopButton = document.getElementById("stopButton");
+    var watchID = null; // 位置情報の監視ID
+    var lastPosition = null;
+    var totalDistance = 0; // 移動距離の累積
+    var totalCalories = 0;
+    var stepCountElement = document.getElementById("stepCount");
+    var selectedMode = "normal";
+    var passMessageElement = document.getElementById("passMessage");
+    var targetLocation = { latitude: 37.9529612 , longitude: 139.3415519 }; // 目標の場所に置き換えてください
+    var proximityThreshold = 0.01; // 近づいたと判断するしきい値（必要に応じて調整）
+    var isSystemPaused = false; // システムの中断状態を管理する変数
+
+    //距離計算
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      var R = 6371; // 地球の半径（キロメートル）
+      var dLat = deg2rad(lat2 - lat1);
+      var dLon = deg2rad(lon2 - lon1);
+      var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      var distance = R * c * 1000; // メートルに変換
+      return distance;
+    }
+
+    function deg2rad(deg) {
+      return deg * (Math.PI / 180);
+    }
+
+    //geolocation
+    function displayLocation(position) {
+      var latitude = position.coords.latitude;
+      var longitude = position.coords.longitude;
+      var accuracy = position.coords.accuracy;
+      var speed = position.coords.speed;
+      var timestamp = new Date(position.timestamp).toLocaleString();
+
+      locationDataElement.innerHTML = "緯度: " + latitude.toFixed(7) + "<br>経度: " + longitude.toFixed(7) + "<br>精度: " + accuracy.toFixed(7) +
+        " メートル<br>取得時刻: " + timestamp;
+
+      // 移動距離を計算
+      if (lastPosition) {
+        var lastLat = lastPosition.coords.latitude;
+        var lastLng = lastPosition.coords.longitude;
+        var currentLat = position.coords.latitude;
+        var currentLng = position.coords.longitude;
+
+        var distance = calculateDistance(lastLat, lastLng, currentLat, currentLng);//メートル
+        totalDistance += distance; // 移動距離を累積
+        distanceElement.innerHTML = "移動距離: " + totalDistance.toFixed(2) + " メートル " +(parseFloat(speed)*3600)/1000+"km/h";
+
+        // カロリー計算
+        var weight = parseFloat(document.getElementById("weightInput").value); // ユーザーの体重
+        var activityType = document.getElementById("activityTypeInput").value; // ユーザーが選択した活動の種類
+        var caloriesBurned = calculateCaloriesBurned(distance,speed, weight, activityType);
+        totalCalories += caloriesBurned; 
+        caloriesElement.innerHTML = "消費カロリー: " + totalCalories.toFixed(2) + " kcal";
+      }
+
+      // 現在の場所が目標の場所に近づいたかどうかを確認
+      if (isCloseToTargetLocation(latitude, longitude)) {
+        passMessageElement.innerText = "新潟職業能力開発短期大学校に近づきました！";
+        stopLocationTracking(); // 目標地点に到達したら位置情報のトラッキングを停止
+      } else {
+        passMessageElement.innerText = ""; // 目標の場所に近づいていない場合はメッセージをクリア
+      }
+
+      lastPosition = position;
+    }
+
+    function isCloseToTargetLocation(latitude, longitude) {
+      // 現在の場所が目標の場所に十分に近いかどうかを確認
+      return (
+        Math.abs(latitude - targetLocation.latitude) < proximityThreshold &&
+        Math.abs(longitude - targetLocation.longitude) < proximityThreshold
+      );
+    }
+
+    function calculateCaloriesBurned(distance,speed, weight, activityType) {
+      // カロリー計算のための定数（一般的な値、実際には調整が必要かもしれません）
+      let caloriesBurned = 1.05 * (distance/parseFloat(speed*3600).toFixed(2)) * weight; //1.05x時間(h)x体重(kg)
+
+      // 活動の種類に応じた補正（例: ウォーキングの場合）
+      if (activityType === "walking") {
+        caloriesBurned *= 3.0; // ウォーキングの場合の補正値
+      } else if (activityType === "running") {
+        caloriesBurned *= 7.0; // ランニングの場合の補正値
+      }
+
+      return caloriesBurned;
+    }
+
+    // 定期的に速度をチェックして中断処理を実行
+    setInterval(function () {
+      if (lastPosition && !isSystemPaused) {
+        var speed = lastPosition.coords.speed;
+        if (parseFloat(speed) * 3600 > 10) { // 速度が10 km/h以上の場合
+          pauseSystem();
+        } else {
+          resumeSystem();
+        }
+      }
+    }, 5000); // 5秒ごとに速度をチェック
+
+    function pauseSystem() {
+      // システムを中断する処理
+      passMessageElement.innerText = "システムが中断されました。";
+      isSystemPaused = true;
+    }
+
+    function resumeSystem() {
+      // システムの中断を解除する処理
+      passMessageElement.innerText = "システムの中断が解除されました。";
+      isSystemPaused = false;
+    }
+
+    function startLocationTracking() {
+      if ("geolocation" in navigator) {
+        // 位置情報の監視を開始
+        watchID = setInterval(function () {
+          navigator.geolocation.getCurrentPosition(displayLocation, function (error) {
+            console.error("位置情報の取得に失敗しました: " + error.message);
+          }, { enableHighAccuracy: true }); // 高精度な位置情報を要求
+        }, 5000);
+        startButton.disabled = true;
+        stopButton.disabled = false;
+      } else {
+        console.error("Geolocationがサポートされていません");
+      }
+    }
+
+    function stopLocationTracking() {
+      if (watchID !== null) {
+        // 位置情報の監視を停止
+        navigator.geolocation.clearWatch(watchID);
+        watchID = null;
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    }
+
+    let isRunning = false;
+    let stepCount = 0;
+    let lastOrientation = { alpha: 0, beta: 0, gamma: 0 };
+
+    var aX = 0, aY = 0, aZ = 0;
+
+    function startSensors() {
+      // アクセルセンサ
+      window.addEventListener("devicemotion", (dat) => {
+        aX = dat.accelerationIncludingGravity.x;
+        aY = dat.accelerationIncludingGravity.y;
+        aZ = dat.accelerationIncludingGravity.z;
+        displayAcceleration();
+      });
+
+      // ジャイロセンサ
+      DeviceOrientationEvent.requestPermission().then(function (response) {
+        if (response === 'granted') {
+          window.addEventListener("deviceorientation", handleOrientation);
+          isRunning = true;
+        }
+      }).catch(function (e) {
+        console.log(e);
+      });
+    }
+
+    function displayAcceleration() {
+      document.getElementById("ax").innerText = aX.toFixed(2);
+      document.getElementById("ay").innerText = aY.toFixed(2);
+      document.getElementById("az").innerText = aZ.toFixed(2);
+    }
+
+    function handleOrientation(e) {
+      e.preventDefault();
+
+      var dir = e.alpha;
+      var fb = e.beta;
+      var lr = e.gamma;
+
+      document.getElementById("dir").innerText = dir.toFixed(2);
+      document.getElementById("fb").innerText = fb.toFixed(2);
+      document.getElementById("lr").innerText = lr.toFixed(2);
+
+      if (selectedMode === "normal") {
+        var deltaOrientation =
+          Math.abs(dir - lastOrientation.alpha) +
+          Math.abs(fb - lastOrientation.beta) +
+          Math.abs(lr - lastOrientation.gamma);
+
+        if (deltaOrientation > 180) {
+          stepCount += 0.25;
+          if (stepCount % 1 == 0) {
+            document.getElementById("stepCount").innerText = stepCount;
+          }
+        }
+      } else if (selectedMode === "smartphone") {
+        // y軸の変化が2以上のときに歩数を増加
+        var deltaY = Math.abs(aY - lastOrientation.y);
+        if (deltaY > 1 && deltaY < 2) {
+          stepCount += 0.25;
+          if (stepCount % 1 == 0) {
+            document.getElementById("stepCount").innerText = stepCount;
+          }
+        }
+      }
+
+      lastOrientation.alpha = dir;
+      lastOrientation.beta = fb;
+      lastOrientation.gamma = lr;
+      lastOrientation.y = aY;
+    }
+
+    function changeMode() {
+      selectedMode = document.getElementById("modeSelect").value;
+      // ここで歩数をリセットしないように変更
+    }
+
+    // 開始ボタンと停止ボタンのクリックイベント
+    startButton.addEventListener("click", startLocationTracking);
+    stopButton.addEventListener("click", stopLocationTracking);
+    stopButton.disabled = true;
+  </script>
+</body>
+
+</html>
