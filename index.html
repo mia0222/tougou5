@@ -32,15 +32,16 @@
 
     <p>歩数: <span id="stepCount">0</span></p>
      <!-- メッセージを表示する新しい div -->
-    <p id="passMessage">特定の場所に近づくとメッセージが表示されます</p>
+    <p id="passMessage">特定の場所に近づくと</p>
+    <p id="passMessage">メッセージが表示されます</p>
   </div>
   <div id="weight">
-    <label for="weightInput">体重（kg）:</label>
+    <label for="weightInput">体重（kg）: </label>
     <input type="number" id="weightInput" step="0.1">
   </div>
 
   <div id="mode">
-    <label for="activityTypeInput">活動の種類:</label>
+    <label for="activityTypeInput">活動の種類: </label>
     <select id="activityTypeInput">
       <option value="walking">ウォーキング</option>
       <option value="running">ランニング</option>
@@ -52,7 +53,7 @@
   <button id="stopButton">停止</button>
 
   <div id="modeSelection">
-    <label for="modeSelect">モード選択:</label>
+    <label for="modeSelect">モード選択: </label>
     <select id="modeSelect" onchange="changeMode()">
       <option value="normal">歩数計</option>
       <option value="smartphone">歩きスマホ</option>
@@ -78,7 +79,7 @@
     var passMessageElement = document.getElementById("passMessage");
     var targetLocation = { latitude: 37.9529612 , longitude: 139.3415519 }; // 目標の場所に置き換えてください
     var proximityThreshold = 0.01; // 近づいたと判断するしきい値（必要に応じて調整）
-    var isSystemPaused = false; // システムの中断状態を管理する変数
+    var SystemPaused = false; // システムの中断状態を管理する変数
 
     //距離計算
     function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -163,7 +164,7 @@
 
     // 定期的に速度をチェックして中断処理を実行
     setInterval(function () {
-      if (lastPosition && !isSystemPaused) {
+      if (lastPosition && !SystemPaused) {
         var speed = lastPosition.coords.speed;
         if (parseFloat(speed) * 3.6 > 6) { // 速度が10 km/h以上の場合
           pauseSystem();
@@ -176,13 +177,13 @@
     function pauseSystem() {
       // システムを中断する処理
       passMessageElement.innerText = "システムが中断されました。";
-      isSystemPaused = true;
+      SystemPaused = true;
     }
 
     function resumeSystem() {
       // システムの中断を解除する処理
       passMessageElement.innerText = "システムの中断が解除されました。";
-      isSystemPaused = false;
+      SystemPaused = false;
     }
 
     function startLocationTracking() {
