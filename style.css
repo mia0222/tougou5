@@ -34,7 +34,7 @@ button{
     display: block;
     margin: 0 auto;
     font-size: 20px;
-    width:500px;
+    width:450px;
     height: 50px;
     font-weight:bold;
 }
@@ -44,11 +44,12 @@ select{
     margin:0 auto;
     margin-left:0;
     margin-bottom:0px;
-    width:300px;
+    width:250px;
     height:40px;
     font-size: 16px;
     font-weight:bold;
 }
+
 #weight{
     display: flex;
     align-items: center;
@@ -90,10 +91,18 @@ select{
     margin-bottom:20px;
 }
 #main{
+    align-items: center;
     border: 10px solid greenyellow;
     border-radius: 30px;
     padding: 10px;
     margin:10px;
+}
+#passMessage{
+    text-align:center;
+    font-size:20px;
+    font-weight:bold;
+    margin:0;
+    padding:0;
 }
 @media only screen and(max-width:750px){
     body{
@@ -132,7 +141,7 @@ select{
         display: block;
         margin: 0 auto;
         font-size: 20px;
-        width:500px;
+        width:450px;
         height: 50px;
         font-weight:bold;
     }
@@ -142,7 +151,7 @@ select{
         margin:0 auto;
         margin-left:0;
         margin-bottom:0px;
-        width:300px;
+        width:250px;
         height:40px;
         font-size: 16px;
         font-weight:bold;
@@ -192,5 +201,13 @@ select{
         border-radius: 30px;
         padding: 10px;
         margin:10px;
+        text-align:center;
+    }
+    #passMessage{
+        text-align:center;
+        font-size:20px;
+        font-weight:bold;
+        margin:0;
+        padding:0;
     }
 }
