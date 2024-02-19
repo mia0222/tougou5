@@ -83,7 +83,7 @@
 
     //距離計算
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      var R = 6371; // 地球の半径（キロメートル）
+      var R = 6378; // 地球の半径（キロメートル）
       var dLat = deg2rad(lat2 - lat1);
       var dLon = deg2rad(lon2 - lon1);
       var a =
@@ -125,7 +125,9 @@
         var weight = parseFloat(document.getElementById("weightInput").value); // ユーザーの体重
         var activityType = document.getElementById("activityTypeInput").value; // ユーザーが選択した活動の種類
         var caloriesBurned = calculateCaloriesBurned(distance,speed, weight, activityType);
-        totalCalories += caloriesBurned; 
+        if(speed !== NaN){
+          totalCalories += caloriesBurned; 
+        }
         caloriesElement.innerHTML = "消費カロリー: " + totalCalories.toFixed(2) + " kcal";
       }
 
